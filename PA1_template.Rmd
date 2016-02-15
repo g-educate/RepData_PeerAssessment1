@@ -1,148 +1,143 @@
-# Reproducible Research: Peer Assessment 1
+**title: "PA1_template"**
 
-## Loading and preprocessing the data
+
+Loading and preprocessing the data
+
 ```{r, echo=TRUE}
-library(sqldf)
-activity_original <- read.csv("activity.csv", header=TRUE)
-activity_exclude_na <- subset(activity_original, !is.na(steps))
-activity_only_na <- subset(activity_original, is.na(steps))
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile = "activity.zip")
+unzip("activity.zip")
 ```
 
-## What is mean total number of steps taken per day?
-```{r, echo=TRUE, fig.height=6, fig.width=12}
-total_steps_by_date <- aggregate(steps ~ date, activity_exclude_na, sum)
-par(mfrow = c(1, 2))
-hist(
-  total_steps_by_date$steps,
-  main = "Distribution of Total Number of Steps Taken per Day",
-  xlab = "Total Number of Steps",
-  ylab = "Frequency"
-)
-plot(
-  total_steps_by_date$steps,
-  type = "h",
-  main = "Total Number of Steps Taken per Day",
-  xlab = "Day",
-  ylab = "Total Number of Steps"
-  )
 
-
-mean_total_number_of_steps <- mean(total_steps_by_date$steps)
-mean_total_number_of_steps
-median_total_number_of_steps <- median(total_steps_by_date$steps)
-median_total_number_of_steps
+```{r, echo=TRUE}
+activity <- read.csv("activity.csv", header = TRUE, sep=",")
 ```
 
-## What is the average daily activity pattern?
+Total Number of Steps taken per day
 
-```{r, echo=TRUE, fig.height=6, fig.width=6}
-average_steps_by_interval <- aggregate(steps ~ interval, activity_exclude_na, mean)
-plot(
-    average_steps_by_interval$interval,
-    average_steps_by_interval$steps,
-    type = "l", 
-    xlab= "Interval",
-    ylab= "Steps"
-  )
-interval_with_most_steps_on_average <- subset(average_steps_by_interval, steps==max(steps))
+Remove the NAs in the activity dataframe
+```{r, echo=TRUE}
+activity_NA_Removed <- activity[complete.cases(activity),]
+
+total_steps_per_day <- aggregate(steps~date, data=activity_NA_Removed, FUN=sum)
+
 ```
 
-**Strategy to imput missing values is to replace them with average steps averaged by interval**
+Histogram of total number of steps taken per day
 
-## Imputing missing values
+```{r, echo=TRUE}
 
-```{r, echo=TRUE, fig.height=12, fig.width=12}
-number_of_rows_with_na <- sum(is.na(activity_original))
-activity_include_na_with_na_replaced <-
-  rbind(
-    activity_exclude_na,
-    sqldf("
-      SELECT
-        ROUND(abi.steps, 0) AS steps,
-        na.date,
-        na.interval
-      FROM
-        activity_only_na na
-      INNER JOIN
-        average_steps_by_interval abi
-          ON abi.interval = na.interval
-      ")
-    )
-total_steps_by_date_2 <- aggregate(steps ~ date, activity_include_na_with_na_replaced, sum)
-par(mfrow = c(2, 2))
-hist(
-  total_steps_by_date$steps,
-  main = "Distribution of Total Number of Steps Taken per Day",
-  xlab = "Total Number of Steps",
-  ylab = "Frequency"
-)
-plot(
-  total_steps_by_date$steps,
-  type = "h",
-  main = "Total Number of Steps Taken per Day",
-  xlab = "Day",
-  ylab = "Total Number of Steps"
-)
-hist(
-  total_steps_by_date_2$steps,
-  main = "Distribution of Total Number of Steps Taken per Day",
-  xlab = "Total Number of Steps",
-  ylab = "Frequency"
-)
-plot(
-  total_steps_by_date_2$steps,
-  type = "h",
-  main = "Total Number of Steps Taken per Day",
-  xlab = "Day",
-  ylab = "Total Number of Steps"
-)
-mean_total_number_of_steps_2 <- mean(total_steps_by_date_2$steps)
-mean_total_number_of_steps_2
-median_total_number_of_steps_2 <- median(total_steps_by_date_2$steps)
-median_total_number_of_steps_2
+hist(total_steps_per_day$steps, xlab="Steps", ylab="Frequency", main= "Histogram of total steps taken each day")
+
 ```
 
-**After imputting the values, the mean and median values are almost the same. **
+Mean of steps taken per day
 
-## Are there differences in activity patterns between weekdays and weekends?
-```{r, echo=TRUE, fig.height=12, fig.width=6}
-activity_include_na_with_na_replaced_with_weekday <-
-  cbind(
-    activity_include_na_with_na_replaced,
-    weekdays(as.POSIXct(activity_include_na_with_na_replaced$date))
-    )
-colnames(activity_include_na_with_na_replaced_with_weekday) <- c("steps", "date", "interval", "day_name")
-activity_include_na_with_na_replaced_with_weekday <-
-  sqldf("
-        SELECT
-          act.*,
-          CASE act.day_name
-            WHEN 'Monday' THEN 'Weekday'
-            WHEN 'Tuesday' THEN 'Weekday'
-            WHEN 'Wednesday' THEN 'Weekday'
-            WHEN 'Thursday' THEN 'Weekday'
-            WHEN 'Friday' THEN 'Weekday'
-            ELSE 'Weekend'
-          END AS is_weekday
-        FROM
-          activity_include_na_with_na_replaced_with_weekday act
-        ")
-average_steps_by_interval_weekday <- aggregate(steps ~ interval + is_weekday, activity_include_na_with_na_replaced_with_weekday, mean)
-par(mfrow = c(2, 1))
-plot(
-  main = "Weekday",
-  subset(average_steps_by_interval_weekday, is_weekday == c("Weekday"))$interval,
-  subset(average_steps_by_interval_weekday, is_weekday == c("Weekday"))$steps,
-  type = "l",
-  xlab = "",
-  ylab = "Number of Steps"
-)
-plot(
-  main = "Weekend",
-  subset(average_steps_by_interval_weekday, is_weekday == c("Weekend"))$interval,
-  subset(average_steps_by_interval_weekday, is_weekday == c("Weekend"))$steps,
-  type = "l",
-  xlab = "Interval",
-  ylab = ""
-)
+```{r, echo=TRUE}
+meansteps <- mean(activity_NA_Removed$steps)
+meansteps
+
+```
+
+Median of steps taken per day
+
+```{r, echo=TRUE}
+mediansteps <- median(activity_NA_Removed$steps)
+mediansteps
+```
+
+Average number of steps taken, averaged across all days
+
+```{r, echo=TRUE}
+average_number_of_steps <- aggregate(steps~interval, data=activity_NA_Removed, FUN = mean)
+
+```
+
+Time series plot of the average steps taken averaged across all days
+
+```{r, echo=TRUE}
+plot(average_number_of_steps$interval, average_number_of_steps$steps, type = "l", xlab = "interval", ylab = "steps", main = "Time series plot of the 5-minute interval and average number of steps")
+
+```
+
+The 5-minute interval that has the maximum number of steps
+
+```{r, echo=TRUE}
+interval_max_steps <- subset(average_number_of_steps, steps==max(steps), select = interval)
+interval_max_steps
+```
+
+Total number of missing values
+
+```{r, echo=TRUE}
+missing_values <- sum(is.na(activity))
+missing_values
+```
+
+**Strategy for imputing missing values:** The strategy to imput NA values is to fill the missing values with the average steps for that interval.
+
+Imputing values to the missing values in the dataset with the above strategy
+
+```{r, echo=TRUE}
+imputed_activity <- as.data.frame(activity)
+imputed_activity$steps <- replace(imputed_activity$steps, is.na(imputed_activity$steps), average_number_of_steps$steps)
+
+```
+
+Histogram of the total number of steps taken with the new dataset created by imputting values
+
+```{r, echo=TRUE}
+hist(imputed_activity$steps, xlab="Steps", ylab="Frequency", main= "Histogram of total steps taken each day")
+```
+
+Mean of the total number of steps taken after imputting values
+
+```{r, echo=TRUE}
+imputed_meansteps <- mean(imputed_activity$steps)
+imputed_meansteps
+
+```
+
+Median of the total number of steps taken after imputting values
+
+```{r, echo=TRUE}
+imputed_mediansteps <- median(imputed_activity$steps)
+imputed_mediansteps
+
+```
+
+After imputting the values, the mean and median still remains the same.
+
+Calculate the day of the week and mark it as a weekday or a weekend day
+
+```{r, echo=TRUE}
+imputed_activity$wkday_wkend <- weekdays(as.Date(imputed_activity$date))
+imputed_activity[imputed_activity=="Saturday"] = "weekend"
+imputed_activity[imputed_activity=="Sunday"] = "weekend"
+imputed_activity[imputed_activity=="Monday"] = "weekday"
+imputed_activity[imputed_activity=="Tuesday"] = "weekday"
+imputed_activity[imputed_activity=="Wednesday"] = "weekday"
+imputed_activity[imputed_activity=="Thursday"] = "weekday"
+imputed_activity[imputed_activity=="Friday"] = "weekday"
+
+```
+
+Create a dataset with the average steps being calculated after the missing values imputed and weekend or weekday being marked
+
+```{r, echo=TRUE}
+average_steps_interval_imputed <- aggregate(steps~interval + wkday_wkend, data= imputed_activity, FUN=mean)
+
+```
+
+Time series plot for the five minute interval and the average number of steps taken average across all weekend and weekday days
+
+```{r, echo=TRUE}
+
+library(ggplot2)
+g<- qplot(average_steps_interval_imputed$interval, average_steps_interval_imputed$steps, data = average_steps_interval_imputed, facets = wkday_wkend~.)
+g<- g + geom_line()
+g <- g+ labs(x= "Interval") + labs(y="Number of steps")
+g
+
+
 ```
